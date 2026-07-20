@@ -1980,6 +1980,9 @@ function Dashboard({ reports, leaves, fines, expenses, payments, settings, onNav
           <Button variant="outline" onClick={() => onNav("reportsPage")} className="justify-start"><Download size={15} />Download report</Button>
         </Card>
       </div>
+      <div className="mt-4 text-center text-sm text-[var(--muted)] pt-4 pb-2">
+        Build by <a href="https://ayaankhalifa.github.io/Portfolio/" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline font-medium">Ayaan Khalifa</a>
+      </div>
     </div>
   );
 }
