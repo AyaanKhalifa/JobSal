@@ -316,7 +316,7 @@ function Pill({ children, color }) {
 
 function AuthScreen({ users, setUsers, onLogin }) {
   const [mode, setMode] = useState(users.length === 0 ? "register" : "login");
-  const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
+  const [form, setForm] = useState({ id: "", name: "", email: "", password: "", confirm: "" });
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -335,13 +335,14 @@ function AuthScreen({ users, setUsers, onLogin }) {
         if (hash !== u.passwordHash) { setError("Incorrect password."); return; }
         onLogin(u, remember);
       } else {
-        if (!form.name.trim() || !form.email.trim() || !form.password) { setError("Fill in all fields."); return; }
+        if (!form.id.trim() || !form.name.trim() || !form.email.trim() || !form.password) { setError("Fill in all fields."); return; }
+        if (users.some((u) => u.id === form.id.trim())) { setError("An account with that Employee ID already exists."); return; }
         if (form.password.length < 6) { setError("Password must be at least 6 characters."); return; }
         if (form.password !== form.confirm) { setError("Passwords do not match."); return; }
         if (users.some((u) => u.email.toLowerCase() === form.email.trim().toLowerCase())) { setError("An account with that email already exists."); return; }
         const hash = await hashPassword(form.password);
         const newUser = {
-          id: uid(), name: form.name.trim(), email: form.email.trim(), passwordHash: hash,
+          id: form.id.trim(), name: form.name.trim(), email: form.email.trim(), passwordHash: hash,
           role: users.length === 0 ? "admin" : "employee",
           hourlyRate: 0, currency: "\u20b9", company: "Freelance", department: "", phone: "", designation: "", location: "", history: "", employmentHistory: [],
           joiningDate: todayStr(), active: true,
@@ -357,9 +358,12 @@ function AuthScreen({ users, setUsers, onLogin }) {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[var(--bg)] text-[var(--ink)] p-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-6">
-          <div className="font-semibold text-xl tracking-tight">WorkFlow Pro</div>
-          <div className="text-xs text-[var(--muted)]">Professional work, salary & payroll management</div>
+        <div className="text-center mb-6 flex flex-col items-center">
+          <div className="flex items-center justify-center gap-2 font-semibold text-xl tracking-tight">
+            <img src="/logo.png" alt="WorkFlow Pro Logo" className="w-8 h-8 object-contain" />
+            WorkFlow Pro
+          </div>
+          <div className="text-xs text-[var(--muted)] mt-1">Professional work, salary & payroll management</div>
         </div>
         <Card className="p-5">
           <div className="flex rounded-lg border border-[var(--line)] p-1 mb-4">
@@ -373,7 +377,10 @@ function AuthScreen({ users, setUsers, onLogin }) {
           )}
           <form onSubmit={submit} className="flex flex-col gap-3">
             {mode === "register" && (
-              <Field label="Full name"><input className={inputCls} value={form.name} onChange={set("name")} /></Field>
+              <>
+                <Field label="Employee ID"><input className={inputCls} value={form.id} onChange={set("id")} /></Field>
+                <Field label="Full name"><input className={inputCls} value={form.name} onChange={set("name")} /></Field>
+              </>
             )}
             <Field label="Email"><input type="email" className={inputCls} value={form.email} onChange={set("email")} /></Field>
             <Field label="Password"><input type="password" className={inputCls} value={form.password} onChange={set("password")} /></Field>
@@ -428,11 +435,13 @@ function EmploymentHistoryTimeline({ history = [] }) {
                 <span className="font-semibold text-sm text-[var(--ink)]">{ev.event}</span>
                 <span className="text-xs font-mono text-[var(--muted)]">{ev.date}</span>
               </div>
-              {(ev.designation || ev.company) && (
+              {(ev.designation || ev.company || ev.location) && (
                 <div className="text-xs text-[var(--muted)] mt-0.5">
                   {ev.designation && <span><span className="font-medium text-[var(--ink)]">Designation:</span> {ev.designation}</span>}
-                  {ev.designation && ev.company && " · "}
+                  {ev.designation && (ev.company || ev.location) && " · "}
                   {ev.company && <span><span className="font-medium text-[var(--ink)]">Company:</span> {ev.company}</span>}
+                  {ev.company && ev.location && " · "}
+                  {ev.location && <span><span className="font-medium text-[var(--ink)]">Location:</span> {ev.location}</span>}
                 </div>
               )}
               {ev.notes && <div className="text-xs text-[var(--muted)] mt-1 italic">"{ev.notes}"</div>}
@@ -465,7 +474,7 @@ function WorkReportForm({ initial, onSave, onClose, rate }) {
       </div>
       <Field label="Task title"><input className={inputCls} value={f.task} onChange={set("task")} placeholder="What did you work on" /></Field>
       <Field label="Description"><textarea className={inputCls} rows={2} value={f.description} onChange={set("description")} /></Field>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         <Field label="Start time"><input type="time" className={inputCls} value={f.startTime} onChange={set("startTime")} /></Field>
         <Field label="End time"><input type="time" className={inputCls} value={f.endTime} onChange={set("endTime")} /></Field>
         <Field label="Break (mins)"><input type="number" min="0" className={inputCls} value={f.breakMins} onChange={set("breakMins")} /></Field>
@@ -850,7 +859,7 @@ function AnalyticsView({ reports, expenses, fines, payments, currency, settings 
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-lg font-semibold text-[var(--ink)]">Analytics</h2>
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="text-sm font-medium text-[var(--ink)] mb-3">Hours â€” last 14 days</div>
           <ResponsiveContainer width="100%" height={220}>
@@ -1031,7 +1040,7 @@ function ReportsView({ reports, leaves, fines, expenses, payments, currency, set
           <div className="text-xl font-bold">{settings.company}</div>
           <div className="text-sm">{settings.employeeName} &middot; Report period {from} to {to} &middot; Generated {todayStr()}</div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-3">
           <StatCard label="Working days" value={wr.length} icon={CheckCircle2} tint={CAL_COLORS.work} />
           <StatCard label="Total hours" value={`${totalHours}h`} icon={Clock} tint={CAL_COLORS.salary} />
           <StatCard label="Gross salary" value={fmtMoney(gross, currency)} icon={IndianRupee} tint={CAL_COLORS.salary} />
@@ -1075,7 +1084,7 @@ function ReportsView({ reports, leaves, fines, expenses, payments, currency, set
 
 function EmploymentHistoryManager({ history = [], onChange, disabled }) {
   const [items, setItems] = useState(history || []);
-  const [newItem, setNewItem] = useState({ date: todayStr(), event: "Promotion", designation: "", company: "", notes: "" });
+  const [newItem, setNewItem] = useState({ date: todayStr(), event: "Promotion", designation: "", company: "", location: "", notes: "" });
 
   useEffect(() => setItems(history || []), [history]);
 
@@ -1083,7 +1092,7 @@ function EmploymentHistoryManager({ history = [], onChange, disabled }) {
     const next = [...items, { ...newItem, id: uid() }].sort((a, b) => (a.date > b.date ? -1 : 1));
     setItems(next);
     onChange(next);
-    setNewItem({ date: todayStr(), event: "Promotion", designation: "", company: "", notes: "" });
+    setNewItem({ date: todayStr(), event: "Promotion", designation: "", company: "", location: "", notes: "" });
   };
   const remove = (id) => {
     const next = items.filter((i) => i.id !== id);
@@ -1105,6 +1114,7 @@ function EmploymentHistoryManager({ history = [], onChange, disabled }) {
             </Field>
             <Field label="Designation"><input className={inputCls} value={newItem.designation} onChange={(e) => setNewItem({ ...newItem, designation: e.target.value })} /></Field>
             <Field label="Company"><input className={inputCls} value={newItem.company} onChange={(e) => setNewItem({ ...newItem, company: e.target.value })} /></Field>
+            <Field label="Location"><input className={inputCls} value={newItem.location} onChange={(e) => setNewItem({ ...newItem, location: e.target.value })} /></Field>
           </div>
           <Field label="Notes"><input className={inputCls} value={newItem.notes} onChange={(e) => setNewItem({ ...newItem, notes: e.target.value })} /></Field>
           <Button onClick={add} variant="outline" className="mt-1 w-full justify-center">Add Event</Button>
@@ -1117,7 +1127,7 @@ function EmploymentHistoryManager({ history = [], onChange, disabled }) {
               <span className="font-semibold text-[var(--ink)]">{ev.event}</span>
               <span className="text-xs font-mono text-[var(--muted)]">{ev.date}</span>
             </div>
-            <div className="text-xs text-[var(--muted)]"><span className="font-medium text-[var(--ink)]">Designation:</span> {ev.designation || "â€”"} &middot; <span className="font-medium text-[var(--ink)]">Company:</span> {ev.company || "â€”"}</div>
+            <div className="text-xs text-[var(--muted)]"><span className="font-medium text-[var(--ink)]">Designation:</span> {ev.designation || "â€”"} &middot; <span className="font-medium text-[var(--ink)]">Company:</span> {ev.company || "â€”"} &middot; <span className="font-medium text-[var(--ink)]">Location:</span> {ev.location || "â€”"}</div>
             {ev.notes && <div className="text-xs text-[var(--ink)] mt-1">{ev.notes}</div>}
             {!disabled && <button onClick={() => remove(ev.id)} className="absolute top-1.5 -left-[9px] w-4 h-4 bg-[var(--panel)] border border-[var(--danger)] text-[var(--danger)] rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity" title="Remove"><X size={10} /></button>}
           </div>
@@ -1307,6 +1317,7 @@ function AdminView({ users, setUsers, currentUser, search = "", onViewAs, onSend
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(({ user }) => 
+        (user.id && user.id.toLowerCase().includes(q)) ||
         user.name.toLowerCase().includes(q) || 
         user.email.toLowerCase().includes(q) ||
         user.role.toLowerCase().includes(q) ||
@@ -1322,29 +1333,49 @@ function AdminView({ users, setUsers, currentUser, search = "", onViewAs, onSend
     pending: round2(acc.pending + r.pending),
   }), { hours: 0, net: 0, pending: 0 });
 
-  const blankForm = { id: uid(), name: "", email: "", password: "", role: "employee", hourlyRate: 0, currency: "₹", company: "Freelance", department: "", phone: "", designation: "", location: "", history: "", employmentHistory: [], joiningDate: todayStr(), active: true };
+  const blankForm = { id: "", name: "", email: "", password: "", role: "employee", hourlyRate: 0, currency: "₹", company: "Freelance", department: "", phone: "", designation: "", location: "", history: "", employmentHistory: [], joiningDate: todayStr(), active: true };
   const [form, setForm] = useState(blankForm);
-  const [promotionForm, setPromotionForm] = useState({ event: "Promotion", date: todayStr(), designation: "", department: "", company: "", notes: "" });
+  const [promotionForm, setPromotionForm] = useState({ event: "Promotion", date: todayStr(), designation: "", department: "", company: "", location: "", notes: "" });
   const [notifForm, setNotifForm] = useState({ title: "", message: "" });
 
   useEffect(() => {
     if (modal?.mode === "edit") setForm({ ...blankForm, ...modal.data });
     if (modal?.mode === "new") setForm(blankForm);
-    if (modal?.mode === "promote") setPromotionForm({ event: "Promotion", date: todayStr(), designation: modal.data?.designation || "", department: modal.data?.department || "", company: modal.data?.company || "", notes: "" });
-    if (modal?.mode === "demote") setPromotionForm({ event: "Demotion", date: todayStr(), designation: "", department: "", company: "", notes: "" });
+    if (modal?.mode === "promote") setPromotionForm({ event: "Promotion", date: todayStr(), designation: modal.data?.designation || "", department: modal.data?.department || "", company: modal.data?.company || "", location: modal.data?.location || "", notes: "" });
+    if (modal?.mode === "demote") setPromotionForm({ event: "Demotion", date: todayStr(), designation: "", department: "", company: "", location: "", notes: "" });
     if (modal?.mode === "notify") setNotifForm({ title: "", message: "" });
   }, [modal]);
 
   const saveEmployee = async () => {
     if (modal.mode === "new") {
-      if (!form.name.trim() || !form.email.trim() || !form.password) return;
+      if (!form.id.trim() || !form.name.trim() || !form.email.trim() || !form.password) return;
+      if (users.some((u) => u.id === form.id.trim())) return;
       if (users.some((u) => u.email.toLowerCase() === form.email.trim().toLowerCase())) return;
       const hash = await hashPassword(form.password);
-      const newUser = { ...form, id: uid(), email: form.email.trim(), passwordHash: hash };
+      const newUser = { ...form, id: form.id.trim(), email: form.email.trim(), passwordHash: hash };
       delete newUser.password;
       setUsers((prev) => [...prev, newUser]);
     } else {
-      setUsers((prev) => prev.map((u) => (u.id === form.id ? { ...u, ...form } : u)));
+      const oldId = modal.data.id;
+      const newId = form.id.trim();
+      if (!newId) return;
+
+      if (oldId !== newId && users.some((u) => u.id === newId)) {
+        alert("Employee ID already exists.");
+        return;
+      }
+
+      if (oldId !== newId) {
+        const keys = ["work", "leaves", "expenses", "fines", "payments", "notifications", "resignation"];
+        for (const k of keys) {
+          const d = await window.storage.get(`emp:${oldId}:${k}`, true);
+          if (d && d.value) {
+            await window.storage.set(`emp:${newId}:${k}`, d.value, true);
+            await window.storage.delete(`emp:${oldId}:${k}`, true);
+          }
+        }
+      }
+      setUsers((prev) => prev.map((u) => (u.id === oldId ? { ...u, ...form, id: newId } : u)));
     }
     setModal(null);
   };
@@ -1356,6 +1387,7 @@ function AdminView({ users, setUsers, currentUser, search = "", onViewAs, onSend
     if (promotionForm.designation) updates.designation = promotionForm.designation;
     if (promotionForm.department) updates.department = promotionForm.department;
     if (promotionForm.company) updates.company = promotionForm.company;
+    if (promotionForm.location) updates.location = promotionForm.location;
     setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, ...updates } : u)));
     setModal(null);
   };
@@ -1537,7 +1569,7 @@ function AdminView({ users, setUsers, currentUser, search = "", onViewAs, onSend
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-3">
         <StatCard label="Employees" value={users.length} icon={Users} tint={CAL_COLORS.salary} />
         <StatCard label="Hours this month" value={`${totals.hours}h`} icon={Clock} tint={CAL_COLORS.work} />
         <StatCard label="Net payroll (mo)" value={fmtMoney(totals.net, currentUser.currency || "\u20b9")} icon={IndianRupee} tint={CAL_COLORS.salary} />
@@ -1556,7 +1588,7 @@ function AdminView({ users, setUsers, currentUser, search = "", onViewAs, onSend
                   className="rounded border-[var(--line)]"
                 />
               </th>
-              <th className="p-3">Employee</th><th className="p-3">Role</th><th className="p-3">Rate</th><th className="p-3">Status</th>
+              <th className="p-3">Employee ID</th><th className="p-3">Employee</th><th className="p-3">Role</th><th className="p-3">Rate</th><th className="p-3">Status</th>
               <th className="p-3">Hours (mo)</th><th className="p-3">Net (mo)</th><th className="p-3">Pending</th><th className="p-3"></th>
             </tr>
           </thead>
@@ -1571,6 +1603,7 @@ function AdminView({ users, setUsers, currentUser, search = "", onViewAs, onSend
                     className="rounded border-[var(--line)]"
                   />
                 </td>
+                <td className="p-3 font-mono text-xs text-[var(--ink)]">{user.id}</td>
                 <td className="p-3">
                   <div className="font-medium text-[var(--ink)]">{user.name}</div>
                   <div className="text-xs text-[var(--muted)]">{user.email}</div>
@@ -1605,14 +1638,15 @@ function AdminView({ users, setUsers, currentUser, search = "", onViewAs, onSend
 
       <Modal open={!!modal && (modal.mode === "edit" || modal.mode === "new")} onClose={() => setModal(null)} title={modal?.mode === "edit" ? "Edit employee" : "Add employee"} wide>
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <Field label="Employee ID"><input className={inputCls} value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} /></Field>
             <Field label="Full name"><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
             <Field label="Email"><input className={inputCls} disabled={modal?.mode === "edit"} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
           </div>
           {modal?.mode === "new" && (
             <Field label="Temporary password"><input type="password" className={inputCls} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></Field>
           )}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             <Field label="Role">
               <select className={inputCls} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
                 <option value="employee">Employee</option>
@@ -1678,6 +1712,7 @@ function AdminView({ users, setUsers, currentUser, search = "", onViewAs, onSend
           <Field label="New Designation (optional)"><input className={inputCls} value={promotionForm.designation} onChange={(e) => setPromotionForm({ ...promotionForm, designation: e.target.value })} /></Field>
           <Field label="New Department (optional)"><input className={inputCls} value={promotionForm.department} onChange={(e) => setPromotionForm({ ...promotionForm, department: e.target.value })} /></Field>
           <Field label="New Company (optional)"><input className={inputCls} value={promotionForm.company} onChange={(e) => setPromotionForm({ ...promotionForm, company: e.target.value })} /></Field>
+          <Field label="New Location (optional)"><input className={inputCls} value={promotionForm.location} onChange={(e) => setPromotionForm({ ...promotionForm, location: e.target.value })} /></Field>
           <Field label="Notes"><textarea className={inputCls} rows={2} value={promotionForm.notes} onChange={(e) => setPromotionForm({ ...promotionForm, notes: e.target.value })} /></Field>
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setModal(null)}>Cancel</Button>
@@ -1916,7 +1951,7 @@ function Dashboard({ reports, leaves, fines, expenses, payments, settings, onNav
         <p className="text-sm text-[var(--muted)]">Here's where things stand today, {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-3">
         <StatCard label="Today's hours" value={`${todayHours}h`} icon={Clock} tint={CAL_COLORS.work} />
         <StatCard label="Today's salary" value={fmtMoney(todaySalary, cur)} icon={IndianRupee} tint={CAL_COLORS.salary} />
         <StatCard label="This week" value={fmtMoney(weekSalary, cur)} icon={TrendingUp} tint={CAL_COLORS.salary} />
@@ -1954,7 +1989,7 @@ function Dashboard({ reports, leaves, fines, expenses, payments, settings, onNav
         </div>
       </Card>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
         <Card className="p-4 md:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-[var(--ink)]">Recent activity</span>
@@ -2110,8 +2145,8 @@ export default function App() {
   };
 
   const vars = theme === "dark"
-    ? { "--bg": "#0d0e12", "--panel": "#15171c", "--ink": "#eef0f3", "--muted": "#8a8f98", "--line": "#23262e", "--hover": "#1c1f26", "--accent": "#4d7cfe", "--danger": "#e5484d" }
-    : { "--bg": "#f6f7f9", "--panel": "#ffffff", "--ink": "#14161a", "--muted": "#6b7280", "--line": "#e6e8ec", "--hover": "#f0f2f5", "--accent": "#3454d1", "--danger": "#e5484d" };
+    ? { "--bg": "#000000", "--panel": "#18181b", "--ink": "#fafafa", "--muted": "#a1a1aa", "--line": "#27272a", "--hover": "#27272a", "--accent": "#a855f7", "--danger": "#ef4444" }
+    : { "--bg": "#f8fafc", "--panel": "#ffffff", "--ink": "#0f172a", "--muted": "#64748b", "--line": "#e2e8f0", "--hover": "#f1f5f9", "--accent": "#4f46e5", "--danger": "#ef4444" };
 
 
   if (!usersLoaded || !sessionLoaded) {
@@ -2140,7 +2175,10 @@ export default function App() {
       `}</style>
       
       <div className="md:hidden flex items-center justify-between p-3 border-b border-[var(--line)] bg-[var(--panel)] no-print">
-        <div className="font-semibold text-[var(--ink)] tracking-tight">WorkFlow Pro</div>
+        <div className="flex items-center gap-2 font-semibold text-[var(--ink)] tracking-tight">
+          <img src="/logo.png" alt="WorkFlow Pro Logo" className="w-6 h-6 object-contain" />
+          WorkFlow Pro
+        </div>
         <button onClick={() => setSidebarOpen(true)} className="p-1.5 rounded-lg hover:bg-[var(--hover)] text-[var(--ink)]">
           <Menu size={20} />
         </button>
@@ -2153,8 +2191,11 @@ export default function App() {
       <aside className={`fixed inset-y-0 left-0 z-40 transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 md:relative md:translate-x-0 w-64 shrink-0 border-r border-[var(--line)] bg-[var(--panel)] flex flex-col p-3 gap-1 no-print`}>
         <div className="flex items-start justify-between px-2 py-3 mb-2">
           <div>
-            <div className="font-semibold text-[var(--ink)] tracking-tight">WorkFlow Pro</div>
-            <div className="text-[11px] text-[var(--muted)]">Salary & payroll tracker</div>
+            <div className="flex items-center gap-2 font-semibold text-[var(--ink)] tracking-tight">
+              <img src="/logo.png" alt="WorkFlow Pro Logo" className="w-6 h-6 object-contain" />
+              WorkFlow Pro
+            </div>
+            <div className="text-[11px] text-[var(--muted)] mt-1">Salary & payroll tracker</div>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="md:hidden p-1.5 rounded-lg hover:bg-[var(--hover)] text-[var(--ink)]"><X size={18} /></button>
         </div>

@@ -8,4 +8,16 @@ html, body, #root {
 
 body {
   margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  button, input, select, textarea, a {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold {
+    font-family: 'Outfit', sans-serif;
+  }
 }
